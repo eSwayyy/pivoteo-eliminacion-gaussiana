@@ -1,7 +1,9 @@
 import csv
 import math
 import numpy as np
-
+import time
+import random
+from tqdm import tqdm
 
 def resolver_referencia(A, B):
     return np.linalg.solve(np.array(A, dtype=float), np.array(B, dtype=float)).tolist()
@@ -17,18 +19,20 @@ def ejecutar(sistema, metodo, funcion, A, B, x_exacto):
     A = [fila[:] for fila in A]
     B = B[:]
     try:
-        x_calc, hist = funcion(A, B)
+        x_calc, hist, tiempo = funcion(A, B)
         return {"sistema": sistema,
                 "metodo": metodo,
                 "solucion": " ".join(f"{v:.6g}" for v in x_calc),
                 "error_relativo": error_norma2(x_exacto, x_calc),
-                "intercambios": len(hist) - 1}
+                "intercambios": len(hist) - 1,
+                "tiempo_s": tiempo}
     except ZeroDivisionError as error:
         return {"sistema": sistema,
                 "metodo": metodo,
                 "solucion": f"ZeroDivisionError: {error}",
                 "error_relativo": "",
-                "intercambios": 0}
+                "intercambios": 0,
+                "tiempo_s": "   "}
 
 
 def guardar_csv(resultados, ruta="./labU3/pivoteo-eliminacion-gaussiana/src/data/resultados.csv"):
@@ -61,16 +65,20 @@ def eliminacion_adelante(A, B):
 
 
 def gauss_sin_pivoteo(A, B):
+    t = time.time()
     hist = []
     hist.append(([fila[:] for fila in A], B[:]))
-    eliminacion_adelante(A, B)
-    return sustitucion_regresiva(A, B), hist
+    for i in tqdm(range(len(A)),desc="Sin pivoteo", disable=len(A)<50):
+        eliminar_columna(A, B, i)
+    x = sustitucion_regresiva(A, B)
+    return x, hist, time.time() - t
 
 
 def gauss_pivoteo_parcial(A, B):
+    t = time.time()
     hist = []
     hist.append(([fila[:] for fila in A], B[:]))
-    for i in range(len(A)):
+    for i in tqdm(range(len(A)),desc="Pivoteo parcial", disable=len(A)<50):
         idx = i
         for j in range(i + 1, len(A)):
             if abs(A[j][i]) > abs(A[idx][i]):
@@ -80,14 +88,15 @@ def gauss_pivoteo_parcial(A, B):
             B[i], B[idx] = B[idx], B[i]
             hist.append(([fila[:] for fila in A], B[:]))
         eliminar_columna(A, B, i)
-    return sustitucion_regresiva(A, B), hist
+    return sustitucion_regresiva(A, B), hist, time.time() - t
 
 
 def gauss_pivoteo_escalado(A, B):
+    t = time.time()
     hist = []
     hist.append(([fila[:] for fila in A], B[:]))
     s = [max(abs(v) for v in fila) for fila in A]   # una sola vez
-    for i in range(len(A)):
+    for i in tqdm(range(len(A)),desc="Pivoteo escalado",disable=len(A)<50):
         idx = i
         for j in range(i + 1, len(A)):
             if abs(A[j][i]) / s[j] > abs(A[idx][i]) / s[idx]:
@@ -98,7 +107,7 @@ def gauss_pivoteo_escalado(A, B):
             s[i], s[idx] = s[idx], s[i]
             hist.append(([fila[:] for fila in A], B[:]))
         eliminar_columna(A, B, i)
-    return sustitucion_regresiva(A, B), hist
+    return sustitucion_regresiva(A, B), hist, time.time() - t
 
 
 def sustitucion_regresiva(A, B):
@@ -124,7 +133,12 @@ if __name__ == "__main__":
     A2, B2 = [[0, 2, 1], [1, -1, 3], [2, 1, -1]], [5, 6, 1]
     A3, B3 = [[0.001, 2, 1, 3], [1, 0.01, -1, 2], [2, -1, 4, 1], [3, 1, 2, 5]], [19.001, 6.02, 16, 31]
 
-    sistemas = {1: (A1, B1), 2: (A2, B2), 3: (A3, B3)}  
+    random.seed(1)
+    N = 200
+    A4 = [[random.uniform(-10, 10) for _ in range(N)] for _ in range(N)]
+    B4 = [random.uniform(-10, 10) for _ in range(N)]
+
+    sistemas = {1: (A1, B1), 2: (A2, B2), 3: (A3, B3), 4: (A4, B4)}  
     metodos = {"Sin pivoteo": gauss_sin_pivoteo,
                "Pivoteo parcial": gauss_pivoteo_parcial,
                "Pivoteo escalado": gauss_pivoteo_escalado}
