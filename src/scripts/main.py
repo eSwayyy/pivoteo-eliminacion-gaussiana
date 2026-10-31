@@ -19,12 +19,12 @@ def ejecutar(sistema, metodo, funcion, A, B, x_exacto):
     A = [fila[:] for fila in A]
     B = B[:]
     try:
-        x_calc, hist, tiempo = funcion(A, B)
+        x_calc, intercambios, tiempo = funcion(A, B)
         return {"sistema": sistema,
                 "metodo": metodo,
                 "solucion": " ".join(f"{v:.6g}" for v in x_calc),
                 "error_relativo": error_norma2(x_exacto, x_calc),
-                "intercambios": len(hist) - 1,
+                "intercambios": intercambios,
                 "tiempo_s": tiempo}
     except ZeroDivisionError as error:
         return {"sistema": sistema,
@@ -66,18 +66,16 @@ def eliminacion_adelante(A, B):
 
 def gauss_sin_pivoteo(A, B):
     t = time.time()
-    hist = []
-    hist.append(([fila[:] for fila in A], B[:]))
+    intercambios = 0
     for i in tqdm(range(len(A)),desc="Sin pivoteo", disable=len(A)<50):
         eliminar_columna(A, B, i)
     x = sustitucion_regresiva(A, B)
-    return x, hist, time.time() - t
+    return x, intercambios, time.time() - t
 
 
 def gauss_pivoteo_parcial(A, B):
     t = time.time()
-    hist = []
-    hist.append(([fila[:] for fila in A], B[:]))
+    intercambios = 0
     for i in tqdm(range(len(A)),desc="Pivoteo parcial", disable=len(A)<50):
         idx = i
         for j in range(i + 1, len(A)):
@@ -86,15 +84,14 @@ def gauss_pivoteo_parcial(A, B):
         if idx != i:
             A[i], A[idx] = A[idx], A[i]
             B[i], B[idx] = B[idx], B[i]
-            hist.append(([fila[:] for fila in A], B[:]))
+            intercambios +=1
         eliminar_columna(A, B, i)
-    return sustitucion_regresiva(A, B), hist, time.time() - t
+    return sustitucion_regresiva(A, B), intercambios, time.time() - t
 
 
 def gauss_pivoteo_escalado(A, B):
     t = time.time()
-    hist = []
-    hist.append(([fila[:] for fila in A], B[:]))
+    intercambios = 0
     s = [max(abs(v) for v in fila) for fila in A]   # una sola vez
     for i in tqdm(range(len(A)),desc="Pivoteo escalado",disable=len(A)<50):
         idx = i
@@ -105,9 +102,9 @@ def gauss_pivoteo_escalado(A, B):
             A[i], A[idx] = A[idx], A[i]
             B[i], B[idx] = B[idx], B[i]
             s[i], s[idx] = s[idx], s[i]
-            hist.append(([fila[:] for fila in A], B[:]))
+            intercambios += 1
         eliminar_columna(A, B, i)
-    return sustitucion_regresiva(A, B), hist, time.time() - t
+    return sustitucion_regresiva(A, B), intercambios, time.time() - t
 
 
 def sustitucion_regresiva(A, B):

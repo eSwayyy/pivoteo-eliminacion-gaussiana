@@ -187,3 +187,39 @@ En la matriz modificada, parcial y escalado empatan porque las filas tienen magn
 
 ## Analisis
 
+### ¿En qué casos el pivoteo parcial y el escalado dieron el mismo resultado? ¿Por qué?
+
+En los sistemas 1, 2 y 3 dieron la misma solución, el mismo error y el mismo número de intercambios (1, 2 y 2). Esto ocurre porque en esos sistemas las filas tienen magnitudes parecidas: los factores de escala son (1, 1), (2, 3, 2) y (3, 2, 4, 5). Al dividir cada candidato entre un factor similar, el orden de los candidatos no cambia, así que ambos métodos eligen el mismo pivote.
+
+<!-- Con la aritmética de 4 cifras, en el sistema 1 los tres métodos coinciden (error 7,07·10⁻⁵), porque el resultado exacto 1,0001 se redondea a 1. Sin pivoteo, el sistema 2 falla (división por cero, ya que a₁₁ = 0) y en el sistema 3 el error relativo es 1,37, frente a 8,7·10⁻⁴ con pivoteo. -->
+
+### ¿Hay algún sistema donde el pivoteo escalado ganó claramente?
+
+En los sistemas dados, no. Se construyó uno donde sí ocurre, mezclando filas de magnitudes muy distintas:
+
+    30,00·x + 591400·y = 591700
+    5,291·x − 6,130·y = 46,78        (solución exacta: x = 10, y = 1)
+
+Con aritmética de 4 cifras:
+
+| Método | Solución | Error relativo | Intercambios |
+|---|---|---|---|
+| Sin pivoteo | x = −10, y = 1,001 | 1,99 | 0 |
+| Pivoteo parcial | x = −10, y = 1,001 | 1,99 | 0 |
+| Pivoteo escalado | x = 10, y = 1 | 2·10⁻¹³ | 1 |
+
+El pivoteo parcial compara solo 30,00 y 5,291, y elige el 30,00. Pero ese valor es diminuto en comparación con el 591400 de su fila: los cocientes del escalado son 30/591400 ≈ 5·10⁻⁵ contra 5,291/6,130 ≈ 0,86, y por eso intercambia las filas y obtiene la solución correcta.
+
+### Tiempo de ejecución en una matriz aleatoria de 200×200
+
+| Método | Tiempo (s) | Diferencia vs. sin pivoteo |
+|---|---|---|
+| Sin pivoteo | 9.003 s | referencia |
+| Pivoteo parcial | 8.259 s | −8.3 % |
+| Pivoteo escalado | 8.542 s | −5.1 % |
+
+Los tiempos se midieron en una sola ejecución por método. Las diferencias son negativas, es decir, los métodos con pivoteo salieron más rápidos que el que no busca pivote, lo cual no puede ser un efecto real, porque hacen el mismo trabajo más la búsqueda. Concluimos que la diferencia medida está dentro del ruido de la medición (orden de ejecución, estado de la CPU, otros procesos), y que el costo del pivoteo es demasiado pequeño para distinguirlo con esta técnica. Entre los dos métodos con pivoteo, el escalado tardó un 3.4 % más que el parcial.
+
+Este resultado coincide con la estimación teórica: la eliminación crece como $n^3/3$ (unas 2.7 millones de operaciones para $n = 200$), mientras que la búsqueda del pivote parcial crece como $n^2/2$ (unas 20 mil comparaciones), es decir, cerca de un 0.75 % del trabajo de la eliminación. Además, en nuestra implementación cada operación aritmética pasa por la función `r`, que formatea el número como texto y es mucho más cara que una resta normal, lo que hace aún más pequeña la fracción que representa la búsqueda. El escalado cuesta algo más que el parcial porque calcula los factores de escala y hace una división por cada candidato.
+
+**¿Justifica el costo el beneficio?** Sí. Un costo menor al 1 % del tiempo (no medible en nuestro experimento) evita errores de orden de magnitud: sin pivoteo, el Sistema 2 falla con `ZeroDivisionError` y el Sistema 3 tiene un error relativo de 137 %. El pivoteo parcial suele bastar; el escalado se justifica cuando las filas del sistema tienen escalas muy distintas, como en el ejemplo de Burden y Faires.
