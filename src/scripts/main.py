@@ -3,7 +3,6 @@ import math
 import numpy as np
 import time
 import random
-from tqdm import tqdm
 
 def resolver_referencia(A, B):
     return np.linalg.solve(np.array(A, dtype=float), np.array(B, dtype=float)).tolist()
@@ -67,7 +66,7 @@ def eliminacion_adelante(A, B):
 def gauss_sin_pivoteo(A, B):
     t = time.time()
     intercambios = 0
-    for i in tqdm(range(len(A)),desc="Sin pivoteo", disable=len(A)<50):
+    for i in range(len(A)):
         eliminar_columna(A, B, i)
     x = sustitucion_regresiva(A, B)
     return x, intercambios, time.time() - t
@@ -76,7 +75,7 @@ def gauss_sin_pivoteo(A, B):
 def gauss_pivoteo_parcial(A, B):
     t = time.time()
     intercambios = 0
-    for i in tqdm(range(len(A)),desc="Pivoteo parcial", disable=len(A)<50):
+    for i in range(len(A)):
         idx = i
         for j in range(i + 1, len(A)):
             if abs(A[j][i]) > abs(A[idx][i]):
@@ -93,7 +92,7 @@ def gauss_pivoteo_escalado(A, B):
     t = time.time()
     intercambios = 0
     s = [max(abs(v) for v in fila) for fila in A]   # una sola vez
-    for i in tqdm(range(len(A)),desc="Pivoteo escalado",disable=len(A)<50):
+    for i in range(len(A)):
         idx = i
         for j in range(i + 1, len(A)):
             if abs(A[j][i]) / s[j] > abs(A[idx][i]) / s[idx]:
