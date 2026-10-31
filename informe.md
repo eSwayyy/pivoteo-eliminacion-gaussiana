@@ -16,17 +16,32 @@ A partir de la función ya definida (1), podemos notar que si el $a_{ii}$ vale e
 
 #### 3. Define cancelación catastrófica y muestra con el sistema del problema motivador en qué línea del algoritmo ocurre.
 
-**Cancelación catastrófica:** Es un fenómeno en este caso de la computación en donde una operación aritmetica de dos números genera una pérdida drástica de digitos significativos en el resultado.
+En el sistema del problema motivador, el multiplicador del primer paso es:
 
-En el algoritmo `src/pivoteo.py` ocurriría en la función r5(x), la cual reduce las cifras significativas de los cálculos, esto con el fin de forzar el error como si se hiciera un cálculo a mano o un cálculo limitado.
+$$
+m_{21} = \frac{1}{0.0001} = 10^4 \tag{2}
+$$
 
+La cancelación ocurre en la actualización del elemento $a_{22}$, que en el código corresponde a la línea de `eliminar_columna`:
+
+```python
+A[j][k] = r(A[j][k] - r(m * A[i][k]))
+```
+
+Con los valores del sistema:
+
+$$
+a_{22} \leftarrow 1 - 10^4 \cdot 1 = -9999 \tag{3}
+$$
+
+Con 3 cifras significativas, $-9999$ se redondea a $-1.00 \times 10^4$ y el $1$ original desaparece. Lo mismo pasa con el lado derecho: $b_2 \leftarrow 2 - 10^4 \cdot 1 = -9998 \approx -1.00 \times 10^4$. Entonces $x_2 = 1.00$, y al sustituir hacia atrás $x_1 = (1 - 1.00)/0.0001 = 0$, cuando lo correcto es $1.0001$. La función `r` solo simula la precisión limitada; la información se destruye en esa resta, porque $10^4$ es tan grande que absorbe al $1$.
 
 
 ## A.2 Las estrategias
 
 #### 4. Describe el pivoteo parcial (partial pivoting): qué busca, dónde busca y qué intercambia.
 
-El pivoteo parcial es otro tipo de pivoteo que busca eliminar el problema que teníamos en (1) cuando el pivote vale 0, este lo que hace es cambiar la fila de la diagonal que vale 0, con la fila que tenga el valor mas grande en su misma columna, así:
+El pivoteo parcial busca, en cada paso $i$, el elemento de mayor valor absoluto en la columna $i$ entre las filas $i, i+1, \dots, n$ (de la diagonal hacia abajo), y lo intercambia con la fila $i$, junto con el elemento correspondiente de $b$. Se aplica **siempre**, no solo cuando el pivote vale 0. Resuelve dos problemas: evita la división por cero y, sobre todo, evita pivotes pequeños. Como el pivote es el mayor de la columna, todos los multiplicadores cumplen $|m_{ij}| \leq 1$, lo que impide que los errores de redondeo se amplifiquen.
 
 $$
 A =\begin{pmatrix} 
@@ -52,23 +67,24 @@ Como podemos ver, se intercambiaron las filas F1 ⇔ F2, lo cual también afecta
 **Pivoteo completo (full pivoting):** En el paso $k$ no se limita a la columna $k$, sino que busca el elemento de mayor valor absoluto en **toda la submatriz restante** (filas $i \geq k$ y columnas $j \geq k$), y lo lleva a la posición $a_{kk}$ intercambiando tanto filas como columnas:
 
 $$
-|a_{pq}| = \max_{i,j \geq k} |a_{ij}| \tag{2}
+|a_{pq}| = \max_{i,j \geq k} |a_{ij}| \tag{4}
 $$
 
 Como intercambiar columnas equivale a intercambiar el orden de las incógnitas, hay que llevar un registro de esa permutación para reordenar $x$ al final.
 
-- **Qué resuelve que el parcial no:** el parcial solo compara dentro de una columna, así que puede quedar con un pivote relativamente pequeño si el mejor candidato está en otra columna. El completo garantiza el pivote más grande posible en cada paso, lo que da la mejor estabilidad numérica y permite detectar el rango de la matriz.
-- **Qué cuesta de más:** buscar el máximo en la submatriz de tamaño $(n-k+1)^2$ en cada paso suma del orden de $n^3/3$ comparaciones en total, es decir, del mismo orden que las operaciones aritméticas de la eliminación. Además hay que llevar la permutación de columnas.
+**Qué resuelve que el parcial no:** el parcial solo compara dentro de una columna, así que puede quedar con un pivote relativamente pequeño si el mejor candidato está en otra columna. El completo garantiza el pivote más grande posible en cada paso, lo que da la mejor estabilidad numérica y permite detectar el rango de la matriz.
+
+**Qué cuesta de más:** buscar el máximo en la submatriz de tamaño $(n-k+1)^2$ en cada paso suma del orden de $n^3/3$ comparaciones en total, es decir, del mismo orden que las operaciones aritméticas de la eliminación. Además hay que llevar la permutación de columnas.
 
 **Pivoteo parcial escalado (scaled partial pivoting):** Antes de eliminar, calcula para cada fila un factor de escala, que es su mayor valor absoluto:
 
 $$
-s_i = \max_{j} |a_{ij}| \tag{3}
+s_i = \max_{j} |a_{ij}| \tag{5}
 $$
 
 Luego, en el paso $k$, elige la fila que maximiza el cociente $|a_{ik}| / s_i$ y la intercambia con la fila $k$. Es decir, compara el tamaño de cada candidato **relativo a su propia fila**.
 
-- **Qué resuelve que el parcial no:** el parcial compara valores absolutos, y por eso depende de las unidades o la escala de cada ecuación. Si una fila tiene números enormes, el parcial puede elegir como pivote un valor que es grande en términos absolutos pero pequeño comparado con el resto de su fila. Ejemplo clásico (Burden y Faires):
+**Qué resuelve que el parcial no:** el parcial compara valores absolutos, y por eso depende de las unidades o la escala de cada ecuación. Si una fila tiene números enormes, el parcial puede elegir como pivote un valor que es grande en términos absolutos pero pequeño comparado con el resto de su fila. Ejemplo clásico (Burden y Faires):
 
 $$
 A = \begin{pmatrix} 30 & 591400 \\ 5.291 & -6.130 \end{pmatrix}, \qquad
@@ -83,30 +99,91 @@ $$
 
 El escalado elige la fila 2, que es la decisión correcta, y con pocas cifras significativas obtiene la solución exacta $x_1 = 10$, $x_2 = 1$.
 
-- **Qué cuesta de más:** calcular los $s_i$ una sola vez cuesta del orden de $n^2$ operaciones, y en cada paso hay que hacer una división por fila candidata. Es mucho más barato que el pivoteo completo, aunque algo más que el parcial.
+**Qué cuesta de más:** calcular los $s_i$ una sola vez cuesta del orden de $n^2$ operaciones, y en cada paso hay que hacer una división por fila candidata. Es mucho más barato que el pivoteo completo, aunque algo más que el parcial.
 
 
 #### 6. ¿Por qué el pivoteo parcial es el que usan en la práctica las bibliotecas reales (LAPACK, NumPy, MATLAB) y no el completo, si el completo es más robusto?
+
+Las bibliotecas reales usan pivoteo parcial porque ofrece casi la misma estabilidad que el completo a un costo mucho menor. La diferencia está en la búsqueda del pivote: el parcial revisa una columna por paso, mientras que el completo revisa toda la submatriz restante.
+
+$$
+\underbrace{\sum_{i=1}^{n} (n-i+1)}_{\text{parcial}} \approx \frac{n^2}{2}
+\qquad \text{frente a} \qquad
+\underbrace{\sum_{i=1}^{n} (n-i+1)^2}_{\text{completo}} \approx \frac{n^3}{3} \tag{6}
+$$
 
 ## A.3 Teoría y límites
 
 #### 7. Investiga qué es el factor de crecimiento (growth factor) y qué relación tiene con la estabilidad del método. Menciona cuál es su cota teórica con pivoteo parcial y por qué en la práctica casi nunca se alcanza.
 
+El **factor de crecimiento** mide cuánto pueden crecer los elementos de la matriz durante la eliminación, comparado con el tamaño original:
+
+$$
+\rho = \frac{\max_{i,j,k} |a_{ij}^{(k)}|}{\max_{i,j} |a_{ij}|} \tag{7}
+$$
+
+donde $a_{ij}^{(k)}$ es el elemento después del paso $k$.
+
+**Relación con la estabilidad:** el error de retroceso de la eliminación gaussiana es proporcional a $\rho$. Si $\rho$ es pequeño, el método es estable; si es grande, los elementos intermedios crecen y arrastran errores de redondeo que contaminan la solución [3, cap. 3], [2, lec. 22]. Sin pivoteo, $\rho$ puede ser arbitrariamente grande: en el Sistema 1, el multiplicador $10^4$ hace crecer $a_{22}$ desde $1$ hasta $-9999$.
+
+**Cota con pivoteo parcial:** como $|m_{ij}| \leq 1$, cada paso puede, como máximo, duplicar el tamaño de los elementos, por lo que:
+
+$$
+\rho \leq 2^{n-1} \tag{8}
+$$
+
+**Por qué casi nunca se alcanza:** para llegar a $2^{n-1}$ se necesita que en cada paso todos los signos y magnitudes se alineen de forma perfecta, una estructura que las matrices que aparecen en la práctica casi nunca tienen. En matrices aleatorias y en las de aplicaciones reales, $\rho$ suele ser pequeño (del orden de $n^{2/3}$ o menos en experimentos) [2, lec. 22], [4, cap. 9]. Por eso el pivoteo parcial se considera estable en la práctica, aunque su garantía teórica sea mala.
+
+
+
 #### 8. ¿Existen matrices en las que se puede aplicar eliminación gaussiana sin pivoteo con total seguridad? Nombra al menos dos familias y justifica por qué.
 
-$$
-\begin{cases}
-0.0001\,x_1 + x_2 = 1 \\
-x_1 + x_2 = 2
-\end{cases}
-$$
+Existen dos familias:
+
+- **Matrices Estrictamente Diagonalmente Dominantes por Filas** \
+Una matriz la cual el valor absoluto del elemento en la diagonal es estrictamente mayor que la suma de los valores absolutos de todos los demás elementos de esa misma fila:
 
 $$
-A_1 = 
-\begin{pmatrix} 
-0.0001 & 1 \\ 1 & 1 
-\end{pmatrix}, \qquad
-b_1 = 
-\begin{pmatrix} 1 \\ 2 
-\end{pmatrix}
+|{a_{ii}}| > \sum_{j\neq i}|a_{ij}|,\ \forall i =1,...n
 $$
+- **Matrices Definidas Positivas** \
+Una matriz simétrica (o hermítica en el caso complejo) $A$ es definida positiva si para cualquier vector no nulo $x$, se cumple que $x^T A x > 0$.
+
+## Matriz 4x4
+
+- Empezamos por una matriz "sana", con enteros entre $-1$ y $5$ elegidos a mano. Para calcular $B_3$ elegimos primero un $x_{exacto}$ simple y calculamos el producto matricial $B_3 = A_3\,x$. Por ejemplo, la primera fila da $1\cdot1 + 2\cdot2 + 1\cdot3 + 3\cdot4 = 20$. $B_3$ no se redondea, para que la solución exacta sea exactamente $x$.
+
+$$
+A_3 = \begin{pmatrix}
+1 & 2 & 1 & 3 \\
+1 & 1 & -1 & 2 \\
+2 & -1 & 4 & 1 \\
+3 & 1 & 2 & 5
+\end{pmatrix}, \qquad
+x = \begin{pmatrix} 1 \\ 2 \\ 3 \\ 4 \end{pmatrix}, \qquad
+B_3 = \begin{pmatrix} 20 \\ 8 \\ 16 \\ 31 \end{pmatrix}
+$$
+
+- Luego hacemos pequeños dos elementos de la diagonal ($a_{11}$ y $a_{22}$). Esto funciona porque un pivote pequeño genera multiplicadores enormes $(1000, 2000, 3000)$, y al restar $a_{jk} - m\,a_{ik}$ el término grande absorbe al pequeño (el mismo mecanismo de la pregunta 3). El resto de la matriz no cambia, y $B_3$ se recalcula con el mismo $x$.
+
+$$
+A_3 = \begin{pmatrix}
+0.001 & 2 & 1 & 3 \\
+1 & 0.01 & -1 & 2 \\
+2 & -1 & 4 & 1 \\
+3 & 1 & 2 & 5
+\end{pmatrix}, \qquad
+B_3 = \begin{pmatrix} 19.001 \\ 6.02 \\ 16 \\ 31 \end{pmatrix}
+$$
+
+- Los valores $0.001$ y $0.01$ y las cifras de $r$ se eligieron probando: con 4 cifras significativas el sin pivoteo da un resultado equivocado sin lanzar excepción (con 3 cifras lanza `ZeroDivisionError`).
+
+| Matriz | Sin pivoteo | Parcial | Escalado |
+|---|---|---|---|
+| Sana | $0$ | $1.4\times10^{-3}$ | $6.6\times10^{-4}$ |
+| Con pivotes pequeños | $1.37$ | $8.7\times10^{-4}$ | $8.7\times10^{-4}$ |
+
+En la matriz modificada, parcial y escalado empatan porque las filas tienen magnitudes parecidas y eligen los mismos pivotes.
+
+## Analisis
+

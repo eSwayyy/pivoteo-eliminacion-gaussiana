@@ -1,0 +1,10 @@
+sistema,metodo,solucion,error_relativo,intercambios
+1,Sin pivoteo,1 0.9999,7.071774989367178e-05,0
+1,Pivoteo parcial,1 0.9999,7.071774989367178e-05,1
+1,Pivoteo escalado,1 0.9999,7.071774989367178e-05,1
+2,Sin pivoteo,ZeroDivisionError: division by zero,,0
+2,Pivoteo parcial,0.882 1.412 2.176,0.00023120601462351726,2
+2,Pivoteo escalado,0.882 1.412 2.176,0.00023120601462351726,2
+3,Sin pivoteo,4 -3.715 2.857 7.857,1.373051625637822,0
+3,Pivoteo parcial,0.9987 1.996 2.999 4.002,0.0008696742685237578,2
+3,Pivoteo escalado,0.9987 1.996 2.999 4.002,0.0008696742685237578,2
